@@ -1,8 +1,8 @@
 ---
 title: "Severe Weather - Effects and Impact"
 author: "jp4711"
-date: "July 20, 2014"
-output: html_document
+date: "July 26, 2014"
+output: word_document
 ---
 
 ```{r setup, include=FALSE, name="setup"}
@@ -13,21 +13,17 @@ knitr::opts_chunk$set(cache=TRUE)
 
 Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
 
-This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+This data analysis involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database from 1950 to 2011. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
 
-This report analyzes the U.S. National Oceanic and Atmospheric Administration’s (NOAA) storm database from 1950 to 2011.
-
-The data analysis int this report address the following questions:
+The data analysis in this report address the following questions:
 
  - Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
 
  - Across the United States, which types of events have the greatest economic consequences?
 
-Overall, Tornadoes are the most hazardous to human health with 5,633 fatalities and 91,346 injuries while floods were responsible for over $150 billion worth of property and crop damages for this period.
-
 # Data Processing
 
-This analysis makes use of dplr library. Documentation can be found at http://cran.r-project.org/web/packages/dplR/dplR.pdf
+This analysis makes use of dplr, knitr, reshape, xtable and ggplot2 library. Documentation of dplr can be found at http://cran.r-project.org/web/packages/dplR/dplR.pdf
 
 ```{r name="load_packages"}
 # use dplr lib 
@@ -154,9 +150,6 @@ eventDamage <- summarise(dataByEventType,
 
 fatalitiesIdx <- order(eventDamage$fatalities, decreasing=TRUE)
 topFatalities <- eventDamage[fatalitiesIdx[1:topN_perEvent],]
-#tFatal <- t(as.matrix(topFatalities[,c("fatalities", "injuries")]))
-#colnames(tFatal) <- topFatalities$EVTYPE
-#tFatal
 ```
 
 ### 3. Top **`r topN_perEvent`** Injuries per Event Type
@@ -164,9 +157,6 @@ topFatalities <- eventDamage[fatalitiesIdx[1:topN_perEvent],]
 ```{r}
 injuryIdx <- order(eventDamage$injuries, decreasing=TRUE)
 topInjury <- eventDamage[injuryIdx[1:topN_perEvent],]
-#tInjury <- t(as.matrix(topInjury[,c("fatalities", "injuries")]))
-#colnames(tInjury) <- topInjury$EVTYPE
-#tInjury
 ```
 
 ## Compute per State - Fatalities, Injuries and Damage
@@ -191,9 +181,6 @@ state_damage <- summarise(by_state,
 ```{r}
 fatalStateIdx <- order(state_damage$fatalities, decreasing=TRUE)
 topFatalState <- state_damage[fatalStateIdx[1:topN_State],]
-#tState <- t(as.matrix(topFatalState[,c("fatalities","injuries")]))
-#colnames(tState) <- topFatalState$STATE
-#tState
 ```
 
 ### 3. Top **`r topN_State`** Damage in dollar per State
@@ -201,20 +188,13 @@ topFatalState <- state_damage[fatalStateIdx[1:topN_State],]
 ```{r}
 dmgStateIdx <- order(state_damage$totalDmg, decreasing=TRUE)
 topDmgState <- state_damage[dmgStateIdx[1:topN_State],]
-#dState <- t(as.matrix(topDmgState[,"totalDmg"]))
-#colnames(dState) <- topDmgState$STATE
-#dState
 ```
-
 
 ## Compute Events with Top Damage
 
 ```{r}
 damageIdx <- order((eventDamage$cropDamage + eventDamage$propDamage), decreasing=TRUE)
 topDollarDmg <- eventDamage[damageIdx[1:topN_Damage],]
-#tDamage <- t(as.matrix(topDollarDmg[,"totalDmg"]))
-#colnames(tDamage) <- topDollarDmg$EVTYPE
-#tDamage
 ```
 
 # Results
@@ -223,13 +203,11 @@ topDollarDmg <- eventDamage[damageIdx[1:topN_Damage],]
 
 ### Top Fatalities by Event Type
 ```{r}
-#topFatalities[,1:3]
 print(topFatalities[,1:2], floating=FALSE)
 ```
 
 ### Top Injuries by Event Type
 ```{r}
-#topInjury[,1:3]
 print(topInjury[,c(1,3)])
 #kable(head(topInjury[,1:3]), format = "markdown")
 ```
@@ -237,10 +215,9 @@ print(topInjury[,c(1,3)])
 ### Top Economic Damage by Event Type
 ```{r}
 X <- topDollarDmg[,c(1,4:6)]
-#X <- topDollarDmg[1:7,c(1,4:5)]
 X[,c(2:4)] <- X[,c(2:4)] / 1000000000
-#print(X)
-kable(head(X), format = "markdown")
+print(X)
+#kable(head(X), format = "markdown")
 ```
  - Note: The numbers of damage are in billions.
 
@@ -256,17 +233,16 @@ ggplot(X1, aes(x=EventType,y=Value, fill=Damage)) +
     ylab("Damage in Billions") + xlab("Event Type") + 
     scale_fill_brewer(palette="Pastel1") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-#X[,c(2:3)] <- X[,c(2:3)] / 1000000000
-#kable(head(X), format = "markdown")
 ```
- - Note: The numbers of propDamage and cropDamage are in billions.
 
-Obeservations: 
+
+Note: The numbers of propDamage and cropDamage are in billions.
+
+####Observations: 
 
  - Tornates caused the most fatalities (over 5,000) and injuries (over 91,000).
- - Floods caused the most monitary damage, over $150 billion total with over $144 billion by property damage. 
- - Drought has the most negative impact on crop damage.  
+ - Floods caused the most monitary damage, over $150 billion total wtih over $144 billion by property damage. 
+ - Droughts have the most negative impact on crop damage.  
  
 ## Analysis per State
 
@@ -295,9 +271,13 @@ ggplot(X, aes(x=State,y=Value, fill=Damage)) +
 kable(head(topDmgState[,c(1,6)]), format = "markdown")
 ```
 
-Observations:
 
- - California has the highest damage from all states (over $127 billion), followed by Lousiana and Florida. In each the biggest bulk came from property damage. 
+Note: The numbers of propDamage and cropDamage are in billions.
+
+
+####Observations:
+
+ - California has the highest damage from all states (over $127 billion), followed by Lousiana and Florida. In each case, the biggest bulk came from property damage. 
  - The top states for human fatalities and injuries are Illinois, Texas, Pennsylvania, Alabama and Missouri.
  
  
