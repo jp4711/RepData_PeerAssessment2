@@ -1,0 +1,301 @@
+---
+title: "Severe Weather - Effects and Impact"
+author: "jp"
+date: "July 20, 2014"
+output: html_document
+---
+
+```{r setup, include=FALSE, name="setup"}
+knitr::opts_chunk$set(cache=TRUE)
+```
+
+# Synopsis
+
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+This report analyzes the U.S. National Oceanic and Atmospheric Administration’s (NOAA) storm database from 1950 to 2011.
+
+The data analysis int this report address the following questions:
+
+ - Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+ - Across the United States, which types of events have the greatest economic consequences?
+
+Overall, Tornadoes are the most hazardous to human health with 5,633 fatalities and 91,346 injuries while floods were responsible for over $150 billion worth of property and crop damages for this period.
+
+# Data Processing
+
+This analysis makes use of dplr library. Documentation can be found at http://cran.r-project.org/web/packages/dplR/dplR.pdf
+
+```{r name="load_packages"}
+# use dplr lib 
+library(dplyr)
+library(xtable)
+library(knitr)
+library(reshape)
+library(ggplot2)
+```
+
+This analysis will use the following original variables:
+
+ - EVTYPE: weather event type (i.e. flood, tornado, ...)
+
+ - BGN_DATE: beginning date of the event
+
+ - STATE: state in which the event occurred
+
+ - COUNTY: county in which the event occurred
+
+ - FATALITIES: number of human fatalities
+
+ - INJURIES: number of human injuries
+
+ - PROPDMG: a measure of the property damage
+
+ - CROPDMG: a measure of the crop damage
+
+and to compute dollar values for damage PROPDMGEXP and CROPDMGEXP (e.g B for billions, M for millions, etc.)
+
+###Load/Retrieve Data
+
+```{r name="load_data"}
+# download data
+setwd("~/Courses/Data Science/repos/Reproducible Research/RepData_PeerAssessment2")
+dataUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+dataFile <- "repdata-data-StormData.csv.bz2"
+
+if (!file.exists(dataFile)) {
+    download.file(dataUrl, dataFile, method="curl")
+}
+orgData <- read.csv(bzfile(dataFile))
+```
+
+The original data include **`r nrow(orgData)`** records and **`r ncol(orgData)`** variables. 
+
+```{r name="select_columns"}
+# select columns needed for this report
+data <- orgData[,c("BGN_DATE","STATE","COUNTY","EVTYPE","FATALITIES","INJURIES","PROPDMG","PROPDMGEXP","CROPDMG","CROPDMGEXP")]
+```
+
+### Compute dollar amount for property and crop damage
+
+To use data for computation the values DMG columns have to be converted int dollar amounts.
+
+```{r name="convertToDollar"}
+# convertToDollar function will convert PROPDMGEXP or CROPDMGEXP 
+# to the correct dollar amount (i.e. M for millions, B for billions, etc.)
+convertToDollar <- function (x) {
+    if (x == "B") {
+        1e9
+    } else if (x %in% c("m","M")) {
+        1e6
+    } else if (x %in% c("k", "K")) {
+        1e3
+    } else if (x %in% c("h", "H")) {
+        1e2
+    } else if (x %in% c("+", "-", "?")) {
+        1
+    } else {
+        0
+    }
+}
+```
+
+```{r}
+# Calculate Property and Crop Damage in dollars by converting xxxxDMGEXP 
+# to the dollar amount and multiplying its dollar representative
+propDamage <- data$PROPDMG * unlist(lapply(data$PROPDMGEXP, function(x) convertToDollar(x)))
+cropDamage <- data$CROPDMG * unlist(lapply(data$CROPDMGEXP, function(x) convertToDollar(x)))
+```
+
+###Create Data Frame with columns needed for this analysis
+
+```{r}
+# create data frame with  dollar values as number
+data <- cbind(orgData[,c("BGN_DATE","STATE","COUNTY","EVTYPE","FATALITIES","INJURIES")], propDamage, cropDamage)
+```
+
+## Compute per Event Type - Fatalities, Injuries and Damage
+
+### 1. Total Fatalities, Injuries and Damage
+
+```{r name="compute_total_sumaries"}
+totalFatalities <- sum(data$FATALITIES)
+totalInjuries <- sum(data$INJURIES)
+totalDamage <- sum(data$cropDamage + data$propDamage)
+topN_perEvent <- 7
+topN_State <- 10
+topN_County <- 10
+topN_Damage <- 10
+
+```
+
+ - total # of fatalities : **`r totalFatalities`**
+
+ - total # of injuries : **`r totalInjuries`**
+
+ - total damage amount : **`r totalDamage`**
+
+### 2. Top **`r topN_perEvent`** Fatalies per Event Type
+
+```{r}
+dataByEventType <- group_by(data, EVTYPE)
+```
+
+```{r}
+eventDamage <- summarise(dataByEventType, 
+    fatalities = sum(FATALITIES, na.rm = TRUE),
+    injuries   = sum(INJURIES, na.rm = TRUE),
+    propDamage = sum(propDamage, na.rm=TRUE),
+    cropDamage = sum(cropDamage, na.rm=TRUE),
+    totalDmg = sum(propDamage + cropDamage, na.rm=TRUE)
+)
+
+fatalitiesIdx <- order(eventDamage$fatalities, decreasing=TRUE)
+topFatalities <- eventDamage[fatalitiesIdx[1:topN_perEvent],]
+tFatal <- t(as.matrix(topFatalities[,c("fatalities", "injuries")]))
+colnames(tFatal) <- topFatalities$EVTYPE
+tFatal
+```
+
+### 3. Top **`r topN_perEvent`** Injuries per Event Type
+
+```{r}
+injuryIdx <- order(eventDamage$injuries, decreasing=TRUE)
+topInjury <- eventDamage[injuryIdx[1:topN_perEvent],]
+tInjury <- t(as.matrix(topInjury[,c("fatalities", "injuries")]))
+colnames(tInjury) <- topInjury$EVTYPE
+tInjury
+```
+
+## Compute per State - Fatalities, Injuries and Damage
+
+An analysis per state was to see the impact on per state level.
+
+### 1. Total Fatalities, Injuries and Damage by State
+
+```{r}
+by_state <- group_by(data, STATE)
+state_damage <- summarise(by_state,
+    fatalities = sum(FATALITIES, na.rm=TRUE),
+    injuries = sum(INJURIES, na.rm=TRUE),
+    propDamage  = sum(propDamage, na.rm=TRUE),
+    cropDamage  = sum(cropDamage, na.rm=TRUE),
+    totalDmg = sum(propDamage + cropDamage, na.rm=TRUE)    
+)
+```
+
+### 2. Top **`r topN_State`** Fatalies per State
+
+```{r}
+fatalStateIdx <- order(state_damage$fatalities, decreasing=TRUE)
+topFatalState <- state_damage[fatalStateIdx[1:topN_State],]
+tState <- t(as.matrix(topFatalState[,c("fatalities","injuries")]))
+colnames(tState) <- topFatalState$STATE
+```
+
+### 3. Top **`r topN_State`** Damage in dollar per State
+
+```{r}
+dmgStateIdx <- order(state_damage$totalDmg, decreasing=TRUE)
+topDmgState <- state_damage[dmgStateIdx[1:topN_State],]
+dState <- t(as.matrix(topDmgState[,"totalDmg"]))
+colnames(dState) <- topDmgState$STATE
+```
+
+
+## Compute Events with Top Damage
+
+```{r}
+damageIdx <- order((eventDamage$cropDamage + eventDamage$propDamage), decreasing=TRUE)
+topDollarDmg <- eventDamage[damageIdx[1:topN_Damage],]
+#tDamage <- t(as.matrix(topDollarDmg[,"totalDmg"]))
+#colnames(tDamage) <- topDollarDmg$EVTYPE
+```
+
+
+# Results
+
+## Analysis per Event Type
+
+### Top Fatalities by Event Type
+```{r}
+#topFatalities[,1:3]
+print(topFatalities[,1:2], floating=FALSE)
+```
+
+### Top Injuries by Event Type
+```{r}
+#topInjury[,1:3]
+print(topInjury[,c(1,3)])
+#kable(head(topInjury[,1:3]), format = "markdown")
+```
+
+### Top Economic Damage by Event Type
+```{r}
+X <- topDollarDmg[,c(1,4:6)]
+#X <- topDollarDmg[1:7,c(1,4:5)]
+X[,c(2:4)] <- X[,c(2:4)] / 1000000000
+#print(X)
+kable(head(X), format = "markdown")
+```
+ - Note: The numbers of damage are in billions.
+
+```{r}
+X <- topDollarDmg[1:7,c(1,4:5)]
+X1 <- melt(X, id=(c("EVTYPE")))
+colnames(X1) <-  c("EventType","Damage","Value")
+X1$Value = X1$Value / 1000000000
+ 
+ggplot(X1, aes(x=EventType,y=Value, fill=Damage)) + 
+    geom_bar(stat="identity", colour="black") +
+    ggtitle("Top Damage By Event Type") +
+    ylab("Damage in Billions") + xlab("Event Type") + 
+    scale_fill_brewer(palette="Pastel1") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+#X[,c(2:3)] <- X[,c(2:3)] / 1000000000
+#kable(head(X), format = "markdown")
+```
+ - Note: The numbers of propDamage and cropDamage are in billions.
+
+Obeservations: 
+
+ - Tornates caused the most fatalities (over 5,000) and injuries (over 91,000).
+ - Floods caused the most monitary damage, over $150 billion total with over $144 billion by property damage. 
+ - Drought has the most negative impact on crop damage.  
+ 
+## Analysis per State
+
+### Top Fatalities by State
+```{r}
+topFatalState[,1:3]
+```
+
+### Top Economic Damage by State
+```{r}
+kable(head(topDmgState[,c(1,4:6)]), format = "markdown")
+```
+
+```{r}
+X <- topDmgState[,c(1,4:5)]
+X <- melt(X, id=(c("STATE")))
+colnames(X) <-  c("State","Damage","Value")
+X$Value = X$Value / 1000000000
+ 
+ggplot(X, aes(x=State,y=Value, fill=Damage)) + 
+    geom_bar(stat="identity", colour="black") +
+    ggtitle("Top Damage By State") +
+    ylab("Damage in Billions") + xlab("State") + 
+    scale_fill_brewer(palette="Pastel1")
+
+kable(head(topDmgState[,c(1,6)]), format = "markdown")
+```
+
+Observations:
+
+ - California has the highest damage from all states, followed by Lousiana and Florida. In each the biggest bulk came from property damage. 
+ - The top states for human fatalities and injuries are Illinois, Texas, Pennsylvania, Alabama and Missouri.
+ 
