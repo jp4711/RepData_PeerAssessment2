@@ -1,6 +1,6 @@
 ---
 title: "Severe Weather - Effects and Impact"
-author: "jp"
+author: "jp4711"
 date: "July 20, 2014"
 output: html_document
 ---
@@ -129,7 +129,6 @@ topN_perEvent <- 7
 topN_State <- 10
 topN_County <- 10
 topN_Damage <- 10
-
 ```
 
  - total # of fatalities : **`r totalFatalities`**
@@ -155,9 +154,9 @@ eventDamage <- summarise(dataByEventType,
 
 fatalitiesIdx <- order(eventDamage$fatalities, decreasing=TRUE)
 topFatalities <- eventDamage[fatalitiesIdx[1:topN_perEvent],]
-tFatal <- t(as.matrix(topFatalities[,c("fatalities", "injuries")]))
-colnames(tFatal) <- topFatalities$EVTYPE
-tFatal
+#tFatal <- t(as.matrix(topFatalities[,c("fatalities", "injuries")]))
+#colnames(tFatal) <- topFatalities$EVTYPE
+#tFatal
 ```
 
 ### 3. Top **`r topN_perEvent`** Injuries per Event Type
@@ -165,9 +164,9 @@ tFatal
 ```{r}
 injuryIdx <- order(eventDamage$injuries, decreasing=TRUE)
 topInjury <- eventDamage[injuryIdx[1:topN_perEvent],]
-tInjury <- t(as.matrix(topInjury[,c("fatalities", "injuries")]))
-colnames(tInjury) <- topInjury$EVTYPE
-tInjury
+#tInjury <- t(as.matrix(topInjury[,c("fatalities", "injuries")]))
+#colnames(tInjury) <- topInjury$EVTYPE
+#tInjury
 ```
 
 ## Compute per State - Fatalities, Injuries and Damage
@@ -192,8 +191,9 @@ state_damage <- summarise(by_state,
 ```{r}
 fatalStateIdx <- order(state_damage$fatalities, decreasing=TRUE)
 topFatalState <- state_damage[fatalStateIdx[1:topN_State],]
-tState <- t(as.matrix(topFatalState[,c("fatalities","injuries")]))
-colnames(tState) <- topFatalState$STATE
+#tState <- t(as.matrix(topFatalState[,c("fatalities","injuries")]))
+#colnames(tState) <- topFatalState$STATE
+#tState
 ```
 
 ### 3. Top **`r topN_State`** Damage in dollar per State
@@ -201,8 +201,9 @@ colnames(tState) <- topFatalState$STATE
 ```{r}
 dmgStateIdx <- order(state_damage$totalDmg, decreasing=TRUE)
 topDmgState <- state_damage[dmgStateIdx[1:topN_State],]
-dState <- t(as.matrix(topDmgState[,"totalDmg"]))
-colnames(dState) <- topDmgState$STATE
+#dState <- t(as.matrix(topDmgState[,"totalDmg"]))
+#colnames(dState) <- topDmgState$STATE
+#dState
 ```
 
 
@@ -213,8 +214,8 @@ damageIdx <- order((eventDamage$cropDamage + eventDamage$propDamage), decreasing
 topDollarDmg <- eventDamage[damageIdx[1:topN_Damage],]
 #tDamage <- t(as.matrix(topDollarDmg[,"totalDmg"]))
 #colnames(tDamage) <- topDollarDmg$EVTYPE
+#tDamage
 ```
-
 
 # Results
 
@@ -296,6 +297,14 @@ kable(head(topDmgState[,c(1,6)]), format = "markdown")
 
 Observations:
 
- - California has the highest damage from all states, followed by Lousiana and Florida. In each the biggest bulk came from property damage. 
+ - California has the highest damage from all states (over $127 billion), followed by Lousiana and Florida. In each the biggest bulk came from property damage. 
  - The top states for human fatalities and injuries are Illinois, Texas, Pennsylvania, Alabama and Missouri.
  
+ 
+## Conclusion
+
+The data analysis address the following questions:
+
+ - which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health across the United States.
+
+ - which types of events have the greatest economic consequences across the United States.
